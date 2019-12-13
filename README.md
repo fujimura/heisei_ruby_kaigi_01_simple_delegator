@@ -18,51 +18,127 @@ date: 2019-12-13
 
 # 今日のお話
 
-SimpleDelegator活用のご提案
+SimpleDelegatorは便利なのにあまり使われていない印象があるので宣伝したい！
 
-# 自己紹介
 # SimpleDelegatorとは
-# 基本的な使い方
+
+- オブジェクト指向でいうところの「委譲」ができるライブラリ
+- Ruby標準ライブラリ 'delegate' に含まれる
+
+# 委譲ってなに
+
+- （時間あれば書く）
+
+# 基本的な使用例
+
+```ruby
+class User
+  def born_on
+    Date.new(1989, 9, 10)
+  end
+end
+
+class UserDecorator < SimpleDelegator
+  def birth_year
+    born_on.year
+  end
+end
+
+decorated_user = UserDecorator.new(User.new)
+decorated_user.birth_year  #=> 1989
+decorated_user.__getobj__  #=> #<User: ...>
+```
+
+出典: https://ruby-doc.org/stdlib-2.6.5/libdoc/delegate/rdoc/SimpleDelegator.html
+
 # 主な使いみち
 
-- アドホックにオブジェクトを拡張したいときに使う
-- デコレータ
-- 複合したオブジェクト
+- アクセサを揃える
 
-# 事例（１）アクセサを揃える
+# 例：APIのレスポンスとカラム名を揃えたい（１）
 
-# Problem: APIのレスポンスとカラム名を揃えたい
-- 微妙にインターフェイスが違うオブジェクトが返ってきてしまう
-- APIのレスポンスとカラム名が違うなど
+- APIのレスポンスがオブジェクト
+- モデルとインターフェイスが違う
+	- `entry.subject` を `entry.title` に入れたいなど
 
-- デコレーター
+# 例：APIのレスポンスとカラム名を揃えたい（２）
+
+```ruby
+class Entry < SimpleDelegator
+  def title
+    subject
+  end
+end
+
+entries = api.get('/entries/').map { |r| Entry.new(r) }
+puts entries.first.title # => `subject`の値      
+```
+
+- いわゆるデコレーター
 - 継承でもいいんだけど気分の問題
-`FeedReader::Entry`
 
-# 事例（２）複合したオブジェクト
+# 例：権限に応じてオブジェクトの値を変えたい
 
-## Problem: 権限に応じてオブジェクトの値を変えたい
+- 複合したオブジェクト（１）
 
-`PostPersonalizer::Result`
+```
+class PersonalizedPost < SimpleDelegator
+  def initialize(post, user)
+    @user = user
+    __setobj__(post)
+  end
 
-# 事例（３）バリデーションを追加
+  def comments
+    __getobj__.comments.filter {|c| !c.author.blocked_by?(@user) }
+  end
+end
 
-## Problem: HashやArrayを作るときに期待しない値があったら例外にしたい
+posts = Post.first(10).map {|p|
+  PersonalizedPost.new(p, current_user)
+}
+posts.first.comments # ブロックされたユーザーのコメントは現れない
+```
+
+- `current_user`で挙動を変えるときなどに便利
+
+# 例：クエリオブジェクト作るの面倒
+- クエリオブジェクト
+
+```
+class DailyNewComment < SimpleDelegator
+  def initialize(user, start_at)
+    comments = user.visible_comments.where(
+      'created_at >= :from AND created_at < :to',
+      from: start_at,
+      to: 24.hours.since(start_at)
+    )
+
+    __setobj__(comments)
+  end
+end
+
+comments = DailyNewComment.new(user, start_at)
+```
+
+# 例：HashやArrayを作るときに期待しない値があったら例外にしたい
+
+- バリデーションを追加
+
 `PlaceChange::PlaceSerializer`
 
-# 事例（４）Hashの並べ替え
 
-## Problem: Hashのソート順を変えたい
+# 例：Hashのソート順を変えたい
+
+- Hashの並べ替え
 - デコレーター
 `FeedItem::FeedItem`
 
-# 事例（５）クエリオブジェクト
-
-## Problem: クエリオブジェクト作るの面倒
 
 `UpdateMailer::NewPostsInGroups`
 
 - https://techracho.bpsinc.jp/hachi8833/2017_10_25/47287
+
+# まとめ
 
 # 補足
 
