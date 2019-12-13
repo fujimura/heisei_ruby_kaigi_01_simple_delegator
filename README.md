@@ -27,7 +27,7 @@ SimpleDelegatorは便利なのにあまり使われていない印象がある�
 
 # 委譲ってなに
 
-- （時間あれば書く）
+- TODO: 時間あれば書く
 
 # 基本的な使用例
 
@@ -53,15 +53,16 @@ decorated_user.__getobj__  #=> #<User: ...>
 
 # 主な使いみち
 
-- アクセサを揃える
+TODO: 詳しく
 
-# 例：APIのレスポンスとカラム名を揃えたい（１）
+- デコレータ
+- 複合したオブジェクト
+- 局所的な拡張
+
+# 例：APIのレスポンスとカラム名を揃えたい
 
 - APIのレスポンスがオブジェクト
 - モデルとインターフェイスが違う
-	- `entry.subject` を `entry.title` に入れたいなど
-
-# 例：APIのレスポンスとカラム名を揃えたい（２）
 
 ```ruby
 class Entry < SimpleDelegator
@@ -74,14 +75,24 @@ entries = api.get('/entries/').map { |r| Entry.new(r) }
 puts entries.first.title # => `subject`の値      
 ```
 
-- いわゆるデコレーター
-- 継承でもいいんだけど気分の問題
+- 継承だと`api.get`で返ってくるオブジェクトを拡張できない
 
-# 例：権限に応じてオブジェクトの値を変えたい
+# 例：ソート順を変えたい
 
-- 複合したオブジェクト（１）
-
+```ruby
+class UserSortedByBirthday < SimpleDelegator
+  def <=>(other)
+    birthday > other.birthday
+  end
+end  
+users = User.limit(10).map {|u| UserSortedByBirthday.new(u) }
+users.sort #=> 誕生日で並べ替えられる
 ```
+
+
+# 例：現在のユーザーによってオブジェクトの値を変えたい
+
+```ruby
 class PersonalizedPost < SimpleDelegator
   def initialize(post, user)
     @user = user
@@ -93,18 +104,15 @@ class PersonalizedPost < SimpleDelegator
   end
 end
 
-posts = Post.first(10).map {|p|
-  PersonalizedPost.new(p, current_user)
-}
+posts = Post.first(10).map {|p| PersonalizedPost.new(p, current_user) }
 posts.first.comments # ブロックされたユーザーのコメントは現れない
 ```
 
-- `current_user`で挙動を変えるときなどに便利
+- パーソナライズに便利
 
 # 例：クエリオブジェクト作るの面倒
-- クエリオブジェクト
 
-```
+```ruby
 class DailyNewComment < SimpleDelegator
   def initialize(user, start_at)
     comments = user.visible_comments.where(
@@ -120,28 +128,33 @@ end
 comments = DailyNewComment.new(user, start_at)
 ```
 
-# 例：HashやArrayを作るときに期待しない値があったら例外にしたい
+- `DailyNewCommentQuery.new(...).result` などとするより簡潔
 
-- バリデーションを追加
+# 例：アクセサを足したい
 
-`PlaceChange::PlaceSerializer`
+```ruby
+class UserWithToken < SimpleDelegator
+  attr_accessor :token
+end
 
+token = generate_token
+users = User.limit(10).map {|user|
+  u = UserWithTimestamp.new(user)
+  u.token = token
+  u
+}
 
-# 例：Hashのソート順を変えたい
+users.first.token #=> 生成したトークン
+```
 
-- Hashの並べ替え
-- デコレーター
-`FeedItem::FeedItem`
+# まとめ
 
-
-`UpdateMailer::NewPostsInGroups`
-
-- https://techracho.bpsinc.jp/hachi8833/2017_10_25/47287
-
-# まとめ
+TODO: 主な使いみち軸で総括
 
 # 補足
 
 - 遅いってマジ？
 - DelegateClassとの違いは？わからん！誰か教えてくれ！
 
+# TODO
+- 全体にbefore/afterにする

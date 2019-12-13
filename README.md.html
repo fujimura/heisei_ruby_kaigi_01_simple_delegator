@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Daisuke Fujimura" />
+  <meta name="date" content="2019-12-13" />
+  <title>SimpleDelegator活用のご提案</title>
+  <style type="text/css">
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+  <style type="text/css">
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+    href="https://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
+  <script src="https://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js"
+    charset="utf-8" type="text/javascript"></script>
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">SimpleDelegator活用のご提案</h1>
+  <p class="subtitle">平成Ruby会議 01</p>
+  <p class="author">
+Daisuke Fujimura
+  </p>
+  <p class="date">2019-12-13</p>
+</div>
+<div id="自己紹介" class="slide section level1">
+<h1>自己紹介</h1>
+<p>藤村大介</p>
+<ul>
+<li>https://twitter.com/ffu_</li>
+<li>https://github.com/fujimura</li>
+<li>スタートアップ数社 ⇨ マチマチCTO ⇨ フリーランス</li>
+<li>現在は数社で技術顧問のお仕事</li>
+<li>RubyとHaskellが好き</li>
+<li><a href="https://gihyo.jp/magazine/wdpress/archive/2019/vol110">WEB+DB PRESS Vol.110 名前付け大全</a>を書いた</li>
+</ul>
+</div>
+<div id="今日のお話" class="slide section level1">
+<h1>今日のお話</h1>
+<p>SimpleDelegatorは便利なのにあまり使われていない印象があるので宣伝したい！</p>
+</div>
+<div id="simpledelegatorとは" class="slide section level1">
+<h1>SimpleDelegatorとは</h1>
+<ul>
+<li>オブジェクト指向でいうところの「委譲」ができるライブラリ</li>
+<li>Ruby標準ライブラリ ‘delegate’ に含まれる</li>
+</ul>
+</div>
+<div id="委譲ってなに" class="slide section level1">
+<h1>委譲ってなに</h1>
+<ul>
+<li>TODO: 時間あれば書く</li>
+</ul>
+</div>
+<div id="基本的な使用例" class="slide section level1">
+<h1>基本的な使用例</h1>
+<div class="sourceCode" id="cb1"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">class</span> <span class="dt">User</span></span>
+<span id="cb1-2"><a href="#cb1-2"></a>  <span class="kw">def</span> born_on</span>
+<span id="cb1-3"><a href="#cb1-3"></a>    <span class="dt">Date</span>.new(<span class="dv">1989</span>, <span class="dv">9</span>, <span class="dv">10</span>)</span>
+<span id="cb1-4"><a href="#cb1-4"></a>  <span class="kw">end</span></span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="kw">end</span></span>
+<span id="cb1-6"><a href="#cb1-6"></a></span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="kw">class</span> <span class="dt">UserDecorator</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a>  <span class="kw">def</span> birth_year</span>
+<span id="cb1-9"><a href="#cb1-9"></a>    born_on.year</span>
+<span id="cb1-10"><a href="#cb1-10"></a>  <span class="kw">end</span></span>
+<span id="cb1-11"><a href="#cb1-11"></a><span class="kw">end</span></span>
+<span id="cb1-12"><a href="#cb1-12"></a></span>
+<span id="cb1-13"><a href="#cb1-13"></a>decorated_user = <span class="dt">UserDecorator</span>.new(<span class="dt">User</span>.new)</span>
+<span id="cb1-14"><a href="#cb1-14"></a>decorated_user.birth_year  <span class="co">#=&gt; 1989</span></span>
+<span id="cb1-15"><a href="#cb1-15"></a>decorated_user.__getobj__  <span class="co">#=&gt; #&lt;User: ...&gt;</span></span></code></pre></div>
+<p>出典: https://ruby-doc.org/stdlib-2.6.5/libdoc/delegate/rdoc/SimpleDelegator.html</p>
+</div>
+<div id="主な使いみち" class="slide section level1">
+<h1>主な使いみち</h1>
+<p>TODO: 詳しく</p>
+<ul>
+<li>デコレータ</li>
+<li>複合したオブジェクト</li>
+<li>局所的な拡張</li>
+</ul>
+</div>
+<div id="例apiのレスポンスとカラム名を揃えたい" class="slide section level1">
+<h1>例：APIのレスポンスとカラム名を揃えたい</h1>
+<ul>
+<li>APIのレスポンスがオブジェクト</li>
+<li>モデルとインターフェイスが違う</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">class</span> <span class="dt">Entry</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a>  <span class="kw">def</span> title</span>
+<span id="cb2-3"><a href="#cb2-3"></a>    subject</span>
+<span id="cb2-4"><a href="#cb2-4"></a>  <span class="kw">end</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a><span class="kw">end</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a></span>
+<span id="cb2-7"><a href="#cb2-7"></a>entries = api.get(<span class="st">&#39;/entries/&#39;</span>).map { |r| <span class="dt">Entry</span>.new(r) }</span>
+<span id="cb2-8"><a href="#cb2-8"></a>puts entries.first.title <span class="co"># =&gt; `subject`の値      </span></span></code></pre></div>
+<ul>
+<li>継承だと<code>api.get</code>で返ってくるオブジェクトを拡張できない</li>
+</ul>
+</div>
+<div id="例ソート順を変えたい" class="slide section level1">
+<h1>例：ソート順を変えたい</h1>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">class</span> <span class="dt">UserSortedByBirthday</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a>  <span class="kw">def</span> &lt;=&gt;(other)</span>
+<span id="cb3-3"><a href="#cb3-3"></a>    birthday &gt; other.birthday</span>
+<span id="cb3-4"><a href="#cb3-4"></a>  <span class="kw">end</span></span>
+<span id="cb3-5"><a href="#cb3-5"></a><span class="kw">end</span>  </span>
+<span id="cb3-6"><a href="#cb3-6"></a>users = <span class="dt">User</span>.limit(<span class="dv">10</span>).map {|u| <span class="dt">UserSortedByBirthday</span>.new(u) }</span>
+<span id="cb3-7"><a href="#cb3-7"></a>users.sort <span class="co">#=&gt; 誕生日で並べ替えられる</span></span></code></pre></div>
+</div>
+<div id="例現在のユーザーによってオブジェクトの値を変えたい" class="slide section level1">
+<h1>例：現在のユーザーによってオブジェクトの値を変えたい</h1>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">class</span> <span class="dt">PersonalizedPost</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a>  <span class="kw">def</span> initialize(post, user)</span>
+<span id="cb4-3"><a href="#cb4-3"></a>    <span class="ot">@user</span> = user</span>
+<span id="cb4-4"><a href="#cb4-4"></a>    __setobj__(post)</span>
+<span id="cb4-5"><a href="#cb4-5"></a>  <span class="kw">end</span></span>
+<span id="cb4-6"><a href="#cb4-6"></a></span>
+<span id="cb4-7"><a href="#cb4-7"></a>  <span class="kw">def</span> comments</span>
+<span id="cb4-8"><a href="#cb4-8"></a>    __getobj__.comments.filter {|c| !c.author.blocked_by?(<span class="ot">@user</span>) }</span>
+<span id="cb4-9"><a href="#cb4-9"></a>  <span class="kw">end</span></span>
+<span id="cb4-10"><a href="#cb4-10"></a><span class="kw">end</span></span>
+<span id="cb4-11"><a href="#cb4-11"></a></span>
+<span id="cb4-12"><a href="#cb4-12"></a>posts = <span class="dt">Post</span>.first(<span class="dv">10</span>).map {|p| <span class="dt">PersonalizedPost</span>.new(p, current_user) }</span>
+<span id="cb4-13"><a href="#cb4-13"></a>posts.first.comments <span class="co"># ブロックされたユーザーのコメントは現れない</span></span></code></pre></div>
+<ul>
+<li>パーソナライズに便利</li>
+</ul>
+</div>
+<div id="例クエリオブジェクト作るの面倒" class="slide section level1">
+<h1>例：クエリオブジェクト作るの面倒</h1>
+<div class="sourceCode" id="cb5"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">class</span> <span class="dt">DailyNewComment</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a>  <span class="kw">def</span> initialize(user, start_at)</span>
+<span id="cb5-3"><a href="#cb5-3"></a>    comments = user.visible_comments.where(</span>
+<span id="cb5-4"><a href="#cb5-4"></a>      <span class="st">&#39;created_at &gt;= :from AND created_at &lt; :to&#39;</span>,</span>
+<span id="cb5-5"><a href="#cb5-5"></a>      <span class="st">from: </span>start_at,</span>
+<span id="cb5-6"><a href="#cb5-6"></a>      <span class="st">to: </span><span class="dv">24</span>.hours.since(start_at)</span>
+<span id="cb5-7"><a href="#cb5-7"></a>    )</span>
+<span id="cb5-8"><a href="#cb5-8"></a></span>
+<span id="cb5-9"><a href="#cb5-9"></a>    __setobj__(comments)</span>
+<span id="cb5-10"><a href="#cb5-10"></a>  <span class="kw">end</span></span>
+<span id="cb5-11"><a href="#cb5-11"></a><span class="kw">end</span></span>
+<span id="cb5-12"><a href="#cb5-12"></a></span>
+<span id="cb5-13"><a href="#cb5-13"></a>comments = <span class="dt">DailyNewComment</span>.new(user, start_at)</span></code></pre></div>
+<ul>
+<li><code>DailyNewCommentQuery.new(...).result</code> などとするより簡潔</li>
+</ul>
+</div>
+<div id="例アクセサを足したい" class="slide section level1">
+<h1>例：アクセサを足したい</h1>
+<div class="sourceCode" id="cb6"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">class</span> <span class="dt">UserWithToken</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb6-2"><a href="#cb6-2"></a>  <span class="ot">attr_accessor</span> <span class="st">:token</span></span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="kw">end</span></span>
+<span id="cb6-4"><a href="#cb6-4"></a></span>
+<span id="cb6-5"><a href="#cb6-5"></a>token = generate_token</span>
+<span id="cb6-6"><a href="#cb6-6"></a>users = <span class="dt">User</span>.limit(<span class="dv">10</span>).map {|user|</span>
+<span id="cb6-7"><a href="#cb6-7"></a>  u = <span class="dt">UserWithTimestamp</span>.new(user)</span>
+<span id="cb6-8"><a href="#cb6-8"></a>  u.token = token</span>
+<span id="cb6-9"><a href="#cb6-9"></a>  u</span>
+<span id="cb6-10"><a href="#cb6-10"></a>}</span>
+<span id="cb6-11"><a href="#cb6-11"></a></span>
+<span id="cb6-12"><a href="#cb6-12"></a>users.first.token <span class="co">#=&gt; 生成したトークン</span></span></code></pre></div>
+</div>
+<div id="まとめ" class="slide section level1">
+<h1>まとめ</h1>
+<p>TODO: 主な使いみち軸で総括</p>
+</div>
+<div id="補足" class="slide section level1">
+<h1>補足</h1>
+<ul>
+<li>遅いってマジ？</li>
+<li>DelegateClassとの違いは？わからん！誰か教えてくれ！</li>
+</ul>
+</div>
+<div id="todo" class="slide section level1">
+<h1>TODO</h1>
+<ul>
+<li>全体にbefore/afterにする</li>
+</ul>
+</div>
+</body>
+</html>
