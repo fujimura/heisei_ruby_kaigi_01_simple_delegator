@@ -6,9 +6,9 @@
   "author": "Daisuke Fujimura <me@fujimuradaisuke.com>",
   "license": "MIT",
   "dependencies": {
-    "puppeteer": "^1.1.1"
+    "puppeteer": "^2.0.0"
   },
-    "scripts": {
+  "scripts": {
     "watch": "node watch.js"
   }
 }
