@@ -2,7 +2,7 @@
 title: "SimpleDelegator活用のご提案"
 subtitle: "平成Ruby会議 01"
 author: Daisuke Fujimura
-date: 2019-12-13
+date: 2019-12-14
 ---
 
 # 自己紹介
@@ -12,8 +12,9 @@ date: 2019-12-13
 - https://twitter.com/ffu_
 - https://github.com/fujimura
 - スタートアップ数社 ⇨ マチマチCTO ⇨ フリーランス
+- Ruby歴11年
 - 現在は数社で技術顧問のお仕事
-- RubyとHaskellが好き
+  - 最近はPythonとYAMLを書いている
 - [WEB+DB PRESS Vol.110 名前付け大全](https://gihyo.jp/magazine/wdpress/archive/2019/vol110)を書いた
 
 # 今日のお話
