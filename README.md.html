@@ -117,12 +117,6 @@ Daisuke Fujimura
 <li>Ruby標準ライブラリ ‘delegate’ に含まれる</li>
 </ul>
 </div>
-<div id="委譲ってなに" class="slide section level1">
-<h1>委譲ってなに</h1>
-<ul>
-<li>TODO: 時間あれば書く</li>
-</ul>
-</div>
 <div id="基本的な使用例" class="slide section level1">
 <h1>基本的な使用例</h1>
 <div class="sourceCode" id="cb1"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">class</span> <span class="dt">User</span></span>
@@ -142,20 +136,25 @@ Daisuke Fujimura
 <span id="cb1-15"><a href="#cb1-15"></a>decorated_user.__getobj__  <span class="co">#=&gt; #&lt;User: ...&gt;</span></span></code></pre></div>
 <p>出典: https://ruby-doc.org/stdlib-2.6.5/libdoc/delegate/rdoc/SimpleDelegator.html</p>
 </div>
-<div id="主な使いみち" class="slide section level1">
-<h1>主な使いみち</h1>
-<p>TODO: 詳しく</p>
+<div id="何が便利なの" class="slide section level1">
+<h1>何が便利なの</h1>
 <ul>
-<li>デコレータ</li>
-<li>複合したオブジェクト</li>
-<li>局所的な拡張</li>
+<li>局所的な振る舞いを後から追加することができる
+<ul>
+<li>部分的にしか使わない実装で元のクラスの実装を膨らませないで済む</li>
+</ul></li>
+<li>デコレーターを簡単に書ける</li>
+<li>その他、小技がいくつか</li>
 </ul>
+</div>
+<div id="具体例" class="slide section level1">
+<h1>具体例</h1>
 </div>
 <div id="例apiのレスポンスとカラム名を揃えたい" class="slide section level1">
 <h1>例：APIのレスポンスとカラム名を揃えたい</h1>
 <ul>
-<li>APIのレスポンスがオブジェクト</li>
-<li>モデルとインターフェイスが違う</li>
+<li>既存のオブジェクトのインターフェイスが期待しているものと異なる</li>
+<li>APIのレスポンスがオブジェクトで、モデルとインターフェイスが違うケース</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">class</span> <span class="dt">Entry</span> &lt; <span class="dt">SimpleDelegator</span></span>
 <span id="cb2-2"><a href="#cb2-2"></a>  <span class="kw">def</span> title</span>
@@ -166,11 +165,14 @@ Daisuke Fujimura
 <span id="cb2-7"><a href="#cb2-7"></a>entries = api.get(<span class="st">&#39;/entries/&#39;</span>).map { |r| <span class="dt">Entry</span>.new(r) }</span>
 <span id="cb2-8"><a href="#cb2-8"></a>puts entries.first.title <span class="co"># =&gt; `subject`の値      </span></span></code></pre></div>
 <ul>
-<li>継承だと<code>api.get</code>で返ってくるオブジェクトを拡張できない</li>
+<li>簡単にデコレーターを書けました</li>
 </ul>
 </div>
 <div id="例ソート順を変えたい" class="slide section level1">
 <h1>例：ソート順を変えたい</h1>
+<ul>
+<li>特定の箇所で既存のオブジェクトのソート順を変えたい</li>
+</ul>
 <div class="sourceCode" id="cb3"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">class</span> <span class="dt">UserSortedByBirthday</span> &lt; <span class="dt">SimpleDelegator</span></span>
 <span id="cb3-2"><a href="#cb3-2"></a>  <span class="kw">def</span> &lt;=&gt;(other)</span>
 <span id="cb3-3"><a href="#cb3-3"></a>    birthday &gt; other.birthday</span>
@@ -178,75 +180,91 @@ Daisuke Fujimura
 <span id="cb3-5"><a href="#cb3-5"></a><span class="kw">end</span>  </span>
 <span id="cb3-6"><a href="#cb3-6"></a>users = <span class="dt">User</span>.limit(<span class="dv">10</span>).map {|u| <span class="dt">UserSortedByBirthday</span>.new(u) }</span>
 <span id="cb3-7"><a href="#cb3-7"></a>users.sort <span class="co">#=&gt; 誕生日で並べ替えられる</span></span></code></pre></div>
-</div>
-<div id="例現在のユーザーによってオブジェクトの値を変えたい" class="slide section level1">
-<h1>例：現在のユーザーによってオブジェクトの値を変えたい</h1>
-<div class="sourceCode" id="cb4"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">class</span> <span class="dt">PersonalizedPost</span> &lt; <span class="dt">SimpleDelegator</span></span>
-<span id="cb4-2"><a href="#cb4-2"></a>  <span class="kw">def</span> initialize(post, user)</span>
-<span id="cb4-3"><a href="#cb4-3"></a>    <span class="ot">@user</span> = user</span>
-<span id="cb4-4"><a href="#cb4-4"></a>    __setobj__(post)</span>
-<span id="cb4-5"><a href="#cb4-5"></a>  <span class="kw">end</span></span>
-<span id="cb4-6"><a href="#cb4-6"></a></span>
-<span id="cb4-7"><a href="#cb4-7"></a>  <span class="kw">def</span> comments</span>
-<span id="cb4-8"><a href="#cb4-8"></a>    __getobj__.comments.filter {|c| !c.author.blocked_by?(<span class="ot">@user</span>) }</span>
-<span id="cb4-9"><a href="#cb4-9"></a>  <span class="kw">end</span></span>
-<span id="cb4-10"><a href="#cb4-10"></a><span class="kw">end</span></span>
-<span id="cb4-11"><a href="#cb4-11"></a></span>
-<span id="cb4-12"><a href="#cb4-12"></a>posts = <span class="dt">Post</span>.first(<span class="dv">10</span>).map {|p| <span class="dt">PersonalizedPost</span>.new(p, current_user) }</span>
-<span id="cb4-13"><a href="#cb4-13"></a>posts.first.comments <span class="co"># ブロックされたユーザーのコメントは現れない</span></span></code></pre></div>
 <ul>
-<li>パーソナライズに便利</li>
-</ul>
-</div>
-<div id="例クエリオブジェクト作るの面倒" class="slide section level1">
-<h1>例：クエリオブジェクト作るの面倒</h1>
-<div class="sourceCode" id="cb5"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">class</span> <span class="dt">DailyNewComment</span> &lt; <span class="dt">SimpleDelegator</span></span>
-<span id="cb5-2"><a href="#cb5-2"></a>  <span class="kw">def</span> initialize(user, start_at)</span>
-<span id="cb5-3"><a href="#cb5-3"></a>    comments = user.visible_comments.where(</span>
-<span id="cb5-4"><a href="#cb5-4"></a>      <span class="st">&#39;created_at &gt;= :from AND created_at &lt; :to&#39;</span>,</span>
-<span id="cb5-5"><a href="#cb5-5"></a>      <span class="st">from: </span>start_at,</span>
-<span id="cb5-6"><a href="#cb5-6"></a>      <span class="st">to: </span><span class="dv">24</span>.hours.since(start_at)</span>
-<span id="cb5-7"><a href="#cb5-7"></a>    )</span>
-<span id="cb5-8"><a href="#cb5-8"></a></span>
-<span id="cb5-9"><a href="#cb5-9"></a>    __setobj__(comments)</span>
-<span id="cb5-10"><a href="#cb5-10"></a>  <span class="kw">end</span></span>
-<span id="cb5-11"><a href="#cb5-11"></a><span class="kw">end</span></span>
-<span id="cb5-12"><a href="#cb5-12"></a></span>
-<span id="cb5-13"><a href="#cb5-13"></a>comments = <span class="dt">DailyNewComment</span>.new(user, start_at)</span></code></pre></div>
-<ul>
-<li><code>DailyNewCommentQuery.new(...).result</code> などとするより簡潔</li>
+<li>デコレーターはインターフェイスだけでなく挙動を拡張することもできます</li>
 </ul>
 </div>
 <div id="例アクセサを足したい" class="slide section level1">
 <h1>例：アクセサを足したい</h1>
-<div class="sourceCode" id="cb6"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">class</span> <span class="dt">UserWithToken</span> &lt; <span class="dt">SimpleDelegator</span></span>
-<span id="cb6-2"><a href="#cb6-2"></a>  <span class="ot">attr_accessor</span> <span class="st">:token</span></span>
-<span id="cb6-3"><a href="#cb6-3"></a><span class="kw">end</span></span>
-<span id="cb6-4"><a href="#cb6-4"></a></span>
-<span id="cb6-5"><a href="#cb6-5"></a>token = generate_token</span>
-<span id="cb6-6"><a href="#cb6-6"></a>users = <span class="dt">User</span>.limit(<span class="dv">10</span>).map {|user|</span>
-<span id="cb6-7"><a href="#cb6-7"></a>  u = <span class="dt">UserWithTimestamp</span>.new(user)</span>
-<span id="cb6-8"><a href="#cb6-8"></a>  u.token = token</span>
-<span id="cb6-9"><a href="#cb6-9"></a>  u</span>
-<span id="cb6-10"><a href="#cb6-10"></a>}</span>
-<span id="cb6-11"><a href="#cb6-11"></a></span>
-<span id="cb6-12"><a href="#cb6-12"></a>users.first.token <span class="co">#=&gt; 生成したトークン</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">class</span> <span class="dt">UserWithToken</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a>  <span class="ot">attr_accessor</span> <span class="st">:token</span></span>
+<span id="cb4-3"><a href="#cb4-3"></a><span class="kw">end</span></span>
+<span id="cb4-4"><a href="#cb4-4"></a></span>
+<span id="cb4-5"><a href="#cb4-5"></a>token = generate_token</span>
+<span id="cb4-6"><a href="#cb4-6"></a>users = <span class="dt">User</span>.limit(<span class="dv">10</span>).map {|user|</span>
+<span id="cb4-7"><a href="#cb4-7"></a>  u = <span class="dt">UserWithTimestamp</span>.new(user)</span>
+<span id="cb4-8"><a href="#cb4-8"></a>  u.token = token</span>
+<span id="cb4-9"><a href="#cb4-9"></a>  u</span>
+<span id="cb4-10"><a href="#cb4-10"></a>}</span>
+<span id="cb4-11"><a href="#cb4-11"></a></span>
+<span id="cb4-12"><a href="#cb4-12"></a>users.first.token <span class="co">#=&gt; 生成したトークン</span></span></code></pre></div>
+<ul>
+<li>元のクラスにアクセサは定義したくない
+<ul>
+<li>クラスを読み下していって「これのアクセサは一体…？」となりがち</li>
+<li>後にそのアクセサが悪用されて副作用パズルが発生したりするけど、これなら防げる</li>
+<li>局所化は最高</li>
+</ul></li>
+</ul>
+</div>
+<div id="例現在のユーザーによってオブジェクトの値を変えたい" class="slide section level1">
+<h1>例：現在のユーザーによってオブジェクトの値を変えたい</h1>
+<ul>
+<li>オブジェクトの振る舞いを他のオブジェクトによって変えたい</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">class</span> <span class="dt">PersonalizedPost</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a>  <span class="kw">def</span> initialize(post, user)</span>
+<span id="cb5-3"><a href="#cb5-3"></a>    <span class="ot">@user</span> = user</span>
+<span id="cb5-4"><a href="#cb5-4"></a>    __setobj__(post)</span>
+<span id="cb5-5"><a href="#cb5-5"></a>  <span class="kw">end</span></span>
+<span id="cb5-6"><a href="#cb5-6"></a></span>
+<span id="cb5-7"><a href="#cb5-7"></a>  <span class="kw">def</span> comments</span>
+<span id="cb5-8"><a href="#cb5-8"></a>    __getobj__.comments.filter {|c| !c.author.blocked_by?(<span class="ot">@user</span>) }</span>
+<span id="cb5-9"><a href="#cb5-9"></a>  <span class="kw">end</span></span>
+<span id="cb5-10"><a href="#cb5-10"></a><span class="kw">end</span></span>
+<span id="cb5-11"><a href="#cb5-11"></a></span>
+<span id="cb5-12"><a href="#cb5-12"></a>posts = <span class="dt">Post</span>.first(<span class="dv">10</span>).map {|p| <span class="dt">PersonalizedPost</span>.new(p, current_user) }</span>
+<span id="cb5-13"><a href="#cb5-13"></a>posts.first.comments <span class="co"># ブロックされたユーザーのコメントは現れない</span></span></code></pre></div>
+<ul>
+<li><code>post</code> に状態をもたせる実装よりも影響範囲が少ない</li>
+<li><code>Post#comments_for(user)</code> という実装も考えられるけど、パーソナライズする箇所が増えるといちいち渡すのが面倒
+<ul>
+<li>局所化は最高</li>
+</ul></li>
+</ul>
+</div>
+<div id="例クエリオブジェクト作るの面倒" class="slide section level1">
+<h1>例：クエリオブジェクト作るの面倒</h1>
+<div class="sourceCode" id="cb6"><pre class="sourceCode ruby"><code class="sourceCode ruby"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">class</span> <span class="dt">DailyNewComment</span> &lt; <span class="dt">SimpleDelegator</span></span>
+<span id="cb6-2"><a href="#cb6-2"></a>  <span class="kw">def</span> initialize(user, start_at)</span>
+<span id="cb6-3"><a href="#cb6-3"></a>    comments = user.visible_comments.where(</span>
+<span id="cb6-4"><a href="#cb6-4"></a>      <span class="st">&#39;created_at &gt;= :from AND created_at &lt; :to&#39;</span>,</span>
+<span id="cb6-5"><a href="#cb6-5"></a>      <span class="st">from: </span>start_at,</span>
+<span id="cb6-6"><a href="#cb6-6"></a>      <span class="st">to: </span><span class="dv">24</span>.hours.since(start_at)</span>
+<span id="cb6-7"><a href="#cb6-7"></a>    )</span>
+<span id="cb6-8"><a href="#cb6-8"></a></span>
+<span id="cb6-9"><a href="#cb6-9"></a>    __setobj__(comments)</span>
+<span id="cb6-10"><a href="#cb6-10"></a>  <span class="kw">end</span></span>
+<span id="cb6-11"><a href="#cb6-11"></a><span class="kw">end</span></span>
+<span id="cb6-12"><a href="#cb6-12"></a></span>
+<span id="cb6-13"><a href="#cb6-13"></a>comments = <span class="dt">DailyNewComment</span>.new(user, start_at)</span></code></pre></div>
+<ul>
+<li>これは完全に小技</li>
+<li><code>DailyNewCommentQuery.new(...).result</code> というようなクエリオブジェクトあるある実装より簡潔</li>
+</ul>
 </div>
 <div id="まとめ" class="slide section level1">
 <h1>まとめ</h1>
-<p>TODO: 主な使いみち軸で総括</p>
+<ul>
+<li>SimpleDelegatorは便利</li>
+<li>局所化進めていきましょう</li>
+</ul>
 </div>
 <div id="補足" class="slide section level1">
 <h1>補足</h1>
 <ul>
 <li>遅いってマジ？</li>
 <li>DelegateClassとの違いは？わからん！誰か教えてくれ！</li>
-</ul>
-</div>
-<div id="todo" class="slide section level1">
-<h1>TODO</h1>
-<ul>
-<li>全体にbefore/afterにする</li>
 </ul>
 </div>
 </body>
