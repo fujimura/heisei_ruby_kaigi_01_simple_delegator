@@ -25,10 +25,6 @@ SimpleDelegatorは便利なのにあまり使われていない印象がある�
 - オブジェクト指向でいうところの「委譲」ができるライブラリ
 - Ruby標準ライブラリ 'delegate' に含まれる
 
-# 委譲ってなに
-
-- TODO: 時間あれば書く
-
 # 基本的な使用例
 
 ```ruby
@@ -51,18 +47,19 @@ decorated_user.__getobj__  #=> #<User: ...>
 
 出典: https://ruby-doc.org/stdlib-2.6.5/libdoc/delegate/rdoc/SimpleDelegator.html
 
-# 主な使いみち
+# 何が便利なの
 
-TODO: 詳しく
+- 局所的な振る舞いを後から追加することができる
+	- 部分的にしか使わない実装で元のクラスの実装を膨らませないで済む
+- デコレーターを簡単に書ける
+- その他、小技がいくつか
 
-- デコレータ
-- 複合したオブジェクト
-- 局所的な拡張
+# 具体例
 
 # 例：APIのレスポンスとカラム名を揃えたい
 
-- APIのレスポンスがオブジェクト
-- モデルとインターフェイスが違う
+- 既存のオブジェクトのインターフェイスが期待しているものと異なる
+- APIのレスポンスがオブジェクトで、モデルとインターフェイスが違うケース
 
 ```ruby
 class Entry < SimpleDelegator
@@ -75,9 +72,11 @@ entries = api.get('/entries/').map { |r| Entry.new(r) }
 puts entries.first.title # => `subject`の値      
 ```
 
-- 継承だと`api.get`で返ってくるオブジェクトを拡張できない
+- 簡単にデコレーターを書けました
 
 # 例：ソート順を変えたい
+
+- 特定の箇所で既存のオブジェクトのソート順を変えたい
 
 ```ruby
 class UserSortedByBirthday < SimpleDelegator
@@ -89,8 +88,34 @@ users = User.limit(10).map {|u| UserSortedByBirthday.new(u) }
 users.sort #=> 誕生日で並べ替えられる
 ```
 
+- デコレーターはインターフェイスだけでなく挙動を拡張することもできます
+
+
+# 例：アクセサを足したい
+
+```ruby
+class UserWithToken < SimpleDelegator
+  attr_accessor :token
+end
+
+token = generate_token
+users = User.limit(10).map {|user|
+  u = UserWithTimestamp.new(user)
+  u.token = token
+  u
+}
+
+users.first.token #=> 生成したトークン
+```
+
+- 元のクラスにアクセサは定義したくない
+	- クラスを読み下していって「これのアクセサは一体…？」となりがち
+	- 後にそのアクセサが悪用されて副作用パズルが発生したりするけど、これなら防げる
+	- 局所化は最高
 
 # 例：現在のユーザーによってオブジェクトの値を変えたい
+
+- オブジェクトの振る舞いを他のオブジェクトによって変えたい
 
 ```ruby
 class PersonalizedPost < SimpleDelegator
@@ -108,7 +133,10 @@ posts = Post.first(10).map {|p| PersonalizedPost.new(p, current_user) }
 posts.first.comments # ブロックされたユーザーのコメントは現れない
 ```
 
-- パーソナライズに便利
+- `post` に状態をもたせる実装よりも影響範囲が少ない
+- `Post#comments_for(user)` という実装も考えられるけど、パーソナライズする箇所が増えるといちいち渡すのが面倒
+	- 局所化は最高
+
 
 # 例：クエリオブジェクト作るの面倒
 
@@ -128,33 +156,15 @@ end
 comments = DailyNewComment.new(user, start_at)
 ```
 
-- `DailyNewCommentQuery.new(...).result` などとするより簡潔
-
-# 例：アクセサを足したい
-
-```ruby
-class UserWithToken < SimpleDelegator
-  attr_accessor :token
-end
-
-token = generate_token
-users = User.limit(10).map {|user|
-  u = UserWithTimestamp.new(user)
-  u.token = token
-  u
-}
-
-users.first.token #=> 生成したトークン
-```
+- これは完全に小技
+- `DailyNewCommentQuery.new(...).result` というようなクエリオブジェクトあるある実装より簡潔
 
 # まとめ
 
-TODO: 主な使いみち軸で総括
+- SimpleDelegatorは便利
+- 局所化進めていきましょう
 
 # 補足
 
 - 遅いってマジ？
 - DelegateClassとの違いは？わからん！誰か教えてくれ！
-
-# TODO
-- 全体にbefore/afterにする
